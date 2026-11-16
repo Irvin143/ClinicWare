@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { Eye, EyeOff, KeyRound, Users } from 'lucide-react';
 import { CatalogoPage } from '../../../components/CatalogoPage.jsx';
 import { ChecklistContrasena, errorContrasena } from '../../../components/ChecklistContrasena.jsx';
-import { AvisoCampo, AvisoGeneral, scrollAlPrimerCampo } from '../../../components/avisosFormulario.jsx';
+import { AvisoCampo, AvisoGeneral, scrollAlPrimerCampo, mapearErrorBackend } from '../../../components/avisosFormulario.jsx';
 import { avisoTelefonoOcupado } from '../../../utils/telefonoCompartido.js';
 import { pacientesApi, odontologosApi } from '../../../services/api.js';
 import { getAuth, identidades } from '../../../config/permisos.js';
