@@ -366,27 +366,47 @@ export default function PacientesPage() {
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-5">
             <div>
               <Etiqueta requerido>Contraseña:</Etiqueta>
-              <input
-                type="password"
-                autoComplete="new-password"
-                placeholder="Crea una contraseña"
-                maxLength={72}
-                className={inputClass}
-                value={form.contrasena}
-                onChange={handleChange('contrasena')}
-              />
+              <div className="relative">
+                <input
+                  type={verContrasena ? 'text' : 'password'}
+                  autoComplete="new-password"
+                  placeholder="Crea una contraseña"
+                  maxLength={72}
+                  className={`${inputClass} pr-12! md:pr-12!`}
+                  value={form.contrasena}
+                  onChange={handleChange('contrasena')}
+                />
+                <button
+                  type="button"
+                  onClick={() => setVerContrasena((valor) => !valor)}
+                  aria-label={verContrasena ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer text-slate-400 dark:text-outline dark:hover:text-on-surface"
+                >
+                  {verContrasena ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
               <ChecklistContrasena contrasena={form.contrasena} />
             </div>
             <div>
               <Etiqueta requerido>Confirmar contraseña:</Etiqueta>
-              <input
-                type="password"
-                autoComplete="new-password"
-                placeholder="Repite la contraseña"
-                className={inputClass}
-                value={form.confirmarContrasena}
-                onChange={handleChange('confirmarContrasena')}
-              />
+              <div className="relative">
+                <input
+                  type={verConfirmar ? 'text' : 'password'}
+                  autoComplete="new-password"
+                  placeholder="Repite la contraseña"
+                  className={`${inputClass} pr-12! md:pr-12!`}
+                  value={form.confirmarContrasena}
+                  onChange={handleChange('confirmarContrasena')}
+                />
+                <button
+                  type="button"
+                  onClick={() => setVerConfirmar((valor) => !valor)}
+                  aria-label={verConfirmar ? 'Ocultar confirmación de contraseña' : 'Mostrar confirmación de contraseña'}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer text-slate-400 dark:text-outline dark:hover:text-on-surface"
+                >
+                  {verConfirmar ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
             </div>
           </div>
         </fieldset>
