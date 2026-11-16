@@ -73,19 +73,19 @@ function citaYaOcurrio(cita) {
 
 // Clases de fondo de píldora por estado (para el selector visual)
 const CLASES_PILDORA = {
-  PENDIENTE:   'border-yellow-300 bg-yellow-50 text-yellow-800 dark:bg-yellow-950 dark:text-yellow-300 dark:border-yellow-800',
-  CONFIRMADA:  'border-yellow-300 bg-yellow-50 text-yellow-800 dark:bg-yellow-950 dark:text-yellow-300 dark:border-yellow-800',
-  ATENDIDA:    'border-teal-300 bg-teal-50 text-teal-800 dark:bg-teal-950 dark:text-teal-300 dark:border-teal-800',
-  CANCELADA:   'border-red-300 bg-red-50 text-red-800 dark:bg-red-950 dark:text-red-300 dark:border-red-800',
-  NO_ASISTIO:  'border-red-300 bg-red-50 text-red-800 dark:bg-red-950 dark:text-red-300 dark:border-red-800',
+  PENDIENTE:  'border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-800 dark:bg-amber-950/60 dark:text-amber-200',
+  CONFIRMADA: 'border-sky-300 bg-sky-50 text-sky-900 dark:border-sky-800 dark:bg-sky-950/60 dark:text-sky-200',
+  ATENDIDA:   'border-teal-300 bg-teal-50 text-teal-900 dark:border-teal-800 dark:bg-teal-950/60 dark:text-teal-200',
+  CANCELADA:  'border-rose-300 bg-rose-50 text-rose-900 dark:border-rose-800 dark:bg-rose-950/60 dark:text-rose-200',
+  NO_ASISTIO: 'border-purple-300 bg-purple-50 text-purple-900 dark:border-purple-800 dark:bg-purple-950/60 dark:text-purple-200',
 };
 
 const CLASES_PILDORA_ACTIVA = {
-  PENDIENTE:   'ring-2 ring-yellow-400 ring-offset-1',
-  CONFIRMADA:  'ring-2 ring-yellow-400 ring-offset-1',
-  ATENDIDA:    'ring-2 ring-teal-400 ring-offset-1',
-  CANCELADA:   'ring-2 ring-red-400 ring-offset-1',
-  NO_ASISTIO:  'ring-2 ring-red-400 ring-offset-1',
+  PENDIENTE:  'ring-2 ring-amber-500 ring-offset-1 dark:ring-offset-slate-900',
+  CONFIRMADA: 'ring-2 ring-sky-500 ring-offset-1 dark:ring-offset-slate-900',
+  ATENDIDA:   'ring-2 ring-teal-500 ring-offset-1 dark:ring-offset-slate-900',
+  CANCELADA:  'ring-2 ring-rose-500 ring-offset-1 dark:ring-offset-slate-900',
+  NO_ASISTIO: 'ring-2 ring-purple-500 ring-offset-1 dark:ring-offset-slate-900',
 };
 
 const ES_DESTRUCTIVO = { CANCELADA: true, NO_ASISTIO: true };

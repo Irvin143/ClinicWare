@@ -22,11 +22,11 @@ export const OPCIONES_ESTADO_CITA = Object.entries(ESTADOS).map(([clave, etiquet
 }));
 
 const TONOS = {
-  Pendiente: 'bg-yellow-50 text-yellow-700',
-  Confirmada: 'bg-yellow-50 text-yellow-700',
-  Atendida: 'bg-teal-50 text-teal-700',
-  Cancelada: 'bg-error-container text-error',
-  'No asistió': 'bg-error-container text-error',
+  Pendiente:    'bg-amber-100 text-amber-800 dark:bg-amber-950/70 dark:text-amber-300',
+  Confirmada:   'bg-sky-100 text-sky-800 dark:bg-sky-950/70 dark:text-sky-300',
+  Atendida:     'bg-teal-100 text-teal-800 dark:bg-teal-950/70 dark:text-teal-300',
+  Cancelada:    'bg-rose-100 text-rose-800 dark:bg-rose-950/70 dark:text-rose-300',
+  'No asistió': 'bg-purple-100 text-purple-800 dark:bg-purple-950/70 dark:text-purple-300',
 };
 
 export const TONO_DESCONOCIDO = 'bg-surface-container text-on-surface-variant';
