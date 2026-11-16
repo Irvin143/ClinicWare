@@ -203,7 +203,7 @@ export function CatalogoPage({
       ? orden.columna
       : cols[0]?.key;
 
-  const totalColumnas = cols.length + 1 + (hayAcciones ? 1 : 0);
+  const totalColumnas = cols.length + (hayAcciones ? 1 : 0);
 
   // Filtro del buscador y, después, orden de la lista ya cargada
   const datosFiltrados = useMemo(() => {
@@ -491,11 +491,6 @@ export function CatalogoPage({
               <table className="w-full min-w-full table-fixed border-separate border-spacing-0 text-left text-sm text-slate-600 dark:text-on-surface-variant">
                 <thead className="border-b border-slate-200 dark:border-outline-variant bg-slate-50 dark:bg-surface-container text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-on-surface-variant">
                   <tr>
-                    {cols.length > 0 && (
-                      <th scope="col" className="w-20 px-5 py-3 whitespace-nowrap normal-case">
-                        No.
-                      </th>
-                    )}
                     {cols.map((col) => {
                       const activa = columnaOrden === col.key;
                       const siguiente =
@@ -513,7 +508,7 @@ export function CatalogoPage({
                             type="button"
                             onClick={() => ordenarPor(col.key)}
                             aria-label={`${etiquetaColumna(col.label)}, orden ${siguiente}`}
-                            className="catalogo-encabezado-ordenable inline-flex max-w-full min-w-0 cursor-pointer items-center gap-1.5 px-5 py-3 text-left whitespace-normal uppercase transition-colors hover:bg-slate-100 dark:hover:bg-surface-container hover:text-slate-700 dark:text-on-surface dark:hover:text-on-surface"
+                            className="catalogo-encabezado-ordenable flex h-full w-full cursor-pointer items-center gap-1.5 px-5 py-3 text-left whitespace-normal uppercase transition-colors hover:bg-slate-100 dark:hover:bg-surface-container hover:text-slate-700 dark:text-on-surface dark:hover:text-on-surface"
                           >
                             <span className="min-w-0 break-words">{col.label}</span>
                             <FlechaOrden activa={activa} direccion={orden.direccion} />
@@ -552,11 +547,6 @@ export function CatalogoPage({
                             : 'catalogo-fila group transition-colors hover:bg-slate-50/50 dark:hover:bg-surface-container/50'
                         }
                       >
-                        <td
-                          className={`w-20 px-5 py-3 align-top whitespace-nowrap ${estaInactiva(fila) ? 'text-slate-400 dark:text-outline' : 'text-slate-700 dark:text-on-surface'}`}
-                        >
-                          {inicio + rowIndex + 1}
-                        </td>
                         {cols.map((col) => (
                           <td
                             key={col.key}
@@ -637,18 +627,6 @@ export function CatalogoPage({
                     className={estaInactiva(fila) ? 'bg-slate-50 dark:bg-surface-container px-4 py-4' : 'px-4 py-4'}
                   >
                     <dl className="m-0 grid gap-2">
-                      <div className="grid grid-cols-[6.5rem_1fr] gap-3 text-sm">
-                        <dt
-                          className={`text-xs font-semibold normal-case tracking-wider ${estaInactiva(fila) ? 'text-slate-400 dark:text-outline' : 'text-slate-500 dark:text-on-surface-variant'}`}
-                        >
-                          No.
-                        </dt>
-                        <dd
-                          className={`m-0 break-words ${estaInactiva(fila) ? 'text-slate-400 dark:text-outline' : 'text-slate-700 dark:text-on-surface'}`}
-                        >
-                          {inicio + rowIndex + 1}
-                        </dd>
-                      </div>
                       {cols.map((col) => (
                         <div key={col.key} className="grid grid-cols-[6.5rem_1fr] gap-3 text-sm">
                           <dt
