@@ -194,6 +194,7 @@ function CeldaDia({
   dia,
   citas,
   esHoy,
+  esPasado = false,
   deshabilitada = false,
   seleccionada = false,
   maxLineas = 3,
@@ -210,7 +211,9 @@ function CeldaDia({
       ? 'bg-teal-100 ring-2 ring-teal-500 ring-inset dark:bg-teal-900/60'
       : esHoy
         ? 'bg-teal-50 hover:bg-teal-100 dark:bg-teal-950/60 dark:hover:bg-teal-900/60'
-        : 'hover:bg-surface-container cursor-pointer';
+        : esPasado
+          ? 'bg-slate-50/70 hover:bg-slate-100/80 dark:bg-surface-dim/40 dark:hover:bg-surface-container/60 cursor-pointer'
+          : 'hover:bg-surface-container cursor-pointer';
 
   return (
     <button
@@ -225,7 +228,11 @@ function CeldaDia({
           {etiqueta ? (
             <span
               className={`text-[11px] font-bold tracking-wider uppercase ${
-                esHoy ? 'text-teal-700 dark:text-teal-400' : 'text-on-surface-variant'
+                esHoy
+                  ? 'text-teal-700 dark:text-teal-400'
+                  : esPasado
+                    ? 'text-slate-400 dark:text-outline'
+                    : 'text-on-surface-variant'
               }`}
             >
               {etiqueta}
@@ -237,14 +244,22 @@ function CeldaDia({
                 ? 'text-outline'
                 : esHoy
                   ? 'bg-teal-600 text-white'
-                  : 'text-on-surface'
+                  : esPasado
+                    ? 'text-slate-400 dark:text-outline'
+                    : 'text-on-surface'
             }`}
           >
             {dia.getDate()}
           </span>
         </span>
         {!deshabilitada && citas.length > 0 ? (
-          <span className="rounded-full bg-teal-100 px-2 py-0.5 text-[10px] font-bold text-teal-800 dark:bg-teal-900 dark:text-teal-200">
+          <span
+            className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+              esPasado && !esHoy && !seleccionada
+                ? 'bg-slate-200/80 text-slate-600 dark:bg-surface-container-high dark:text-on-surface-variant'
+                : 'bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-200'
+            }`}
+          >
             {citas.length} {citas.length === 1 ? 'cita' : 'citas'}
           </span>
         ) : null}
@@ -254,23 +269,45 @@ function CeldaDia({
         ? visibles.map((cita) => (
             <span
               key={cita.id_cita}
-              className="flex min-w-0 items-center gap-1.5 text-[11px] leading-4 text-on-surface-variant"
+              className={`flex min-w-0 items-center gap-1.5 text-[11px] leading-4 ${
+                esPasado && !seleccionada && !esHoy
+                  ? 'text-slate-400 opacity-75 dark:text-outline'
+                  : 'text-on-surface-variant'
+              }`}
             >
               <span
                 aria-hidden="true"
                 className={`h-1.5 w-1.5 shrink-0 rounded-full ${
-                  esUrgencia(cita) ? 'bg-error' : 'bg-teal-600'
+                  esUrgencia(cita)
+                    ? 'bg-error'
+                    : esPasado && !seleccionada && !esHoy
+                      ? 'bg-slate-400 dark:bg-outline'
+                      : 'bg-teal-600'
                 }`}
               />
               <span className="truncate">
-                <span className="font-bold text-on-surface">{horaCorta(cita.hora)}</span>{' '}
+                <span
+                  className={`font-bold ${
+                    esPasado && !seleccionada && !esHoy
+                      ? 'text-slate-500 dark:text-outline'
+                      : 'text-on-surface'
+                  }`}
+                >
+                  {horaCorta(cita.hora)}
+                </span>{' '}
                 {nombrePaciente(cita.paciente)}
               </span>
             </span>
           ))
         : null}
       {!deshabilitada && restantes > 0 ? (
-        <span className="text-[11px] font-semibold text-teal-700 dark:text-teal-400">
+        <span
+          className={`text-[11px] font-semibold ${
+            esPasado && !seleccionada && !esHoy
+              ? 'text-slate-400 dark:text-outline'
+              : 'text-teal-700 dark:text-teal-400'
+          }`}
+        >
           +{restantes} más
         </span>
       ) : null}
@@ -361,12 +398,14 @@ function VistaMes({ celdas, mesVisible, hoyYmd, citasPorDia, seleccionado, onSel
         {celdas.map((dia) => {
           const ymd = aYmd(dia);
           const pertenece = enMes(dia);
+          const esPasado = ymd < hoyYmd;
           return (
             <CeldaDia
               key={ymd}
               dia={dia}
               citas={pertenece ? (citasPorDia[ymd] ?? []) : []}
               esHoy={pertenece && ymd === hoyYmd}
+              esPasado={pertenece && esPasado}
               deshabilitada={!pertenece}
               seleccionada={pertenece && ymd === seleccionado}
               maxLineas={2}
@@ -380,12 +419,14 @@ function VistaMes({ celdas, mesVisible, hoyYmd, citasPorDia, seleccionado, onSel
       <div className="flex flex-col divide-y divide-outline-variant lg:hidden">
         {celdas.filter(enMes).map((dia) => {
           const ymd = aYmd(dia);
+          const esPasado = ymd < hoyYmd;
           return (
             <CeldaDia
               key={ymd}
               dia={dia}
               citas={citasPorDia[ymd] ?? []}
               esHoy={ymd === hoyYmd}
+              esPasado={esPasado}
               seleccionada={ymd === seleccionado}
               maxLineas={3}
               etiqueta={DIAS_CABECERA[(dia.getDay() + 6) % 7]}
@@ -404,12 +445,14 @@ function VistaSemana({ dias, hoyYmd, citasPorDia, seleccionado, onSeleccionar })
     <div className="flex flex-col divide-y divide-outline-variant lg:grid lg:grid-cols-7 lg:divide-x lg:divide-y-0">
       {dias.map((dia, i) => {
         const ymd = aYmd(dia);
+        const esPasado = ymd < hoyYmd;
         return (
           <CeldaDia
             key={ymd}
             dia={dia}
             citas={citasPorDia[ymd] ?? []}
             esHoy={ymd === hoyYmd}
+            esPasado={esPasado}
             seleccionada={ymd === seleccionado}
             maxLineas={6}
             etiqueta={DIAS_CABECERA[i]}
@@ -429,6 +472,7 @@ function VistaDia({ dia, hoyYmd, citasDelDia }) {
       dia={dia}
       citas={citasDelDia}
       esHoy={ymd === hoyYmd}
+      esPasado={ymd < hoyYmd}
       seleccionada
       maxLineas={50}
       etiqueta={DIAS_CABECERA[(dia.getDay() + 6) % 7]}
