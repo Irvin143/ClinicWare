@@ -5,6 +5,7 @@ import { BadgeEstado, etiquetaEstado } from '../../utils/estadoCita.jsx';
 import ModalDetalleCita from './ModalDetalleCita.jsx';
 import { useToasts } from '../../hooks/useToasts.js';
 import { ToastContainer } from '../../components/Toast.jsx';
+import { getAuth, identidades } from '../../config/permisos.js';
 
 const LOCALE = 'es-MX';
 const DIAS_CABECERA = ['LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB', 'DOM'];
@@ -485,6 +486,7 @@ function VistaDia({ dia, hoyYmd, citasDelDia }) {
 
 export default function AgendaPage() {
   const { toasts, exito, error: mostrarError, cerrar: cerrarToast } = useToasts();
+  const esOdontologo = identidades(getAuth()?.usuario).includes('odontologo');
   const [vista, setVista] = useState('mes');
   const [ancla, setAncla] = useState(() => inicioDia(new Date()));
   const [citas, setCitas] = useState([]);
@@ -542,10 +544,19 @@ export default function AgendaPage() {
     [citas]
   );
 
-  const idClinicaEfectivo = opcionesClinica.some((op) => op.id === idClinica) ? idClinica : '';
-  const idOdontologoEfectivo = opcionesOdontologo.some((op) => op.id === idOdontologo)
-    ? idOdontologo
-    : '';
+  const idClinicaEfectivo =
+    opcionesClinica.length === 1
+      ? String(opcionesClinica[0].id)
+      : opcionesClinica.some((op) => op.id === idClinica)
+        ? idClinica
+        : '';
+
+  const idOdontologoEfectivo =
+    esOdontologo || opcionesOdontologo.length <= 1
+      ? ''
+      : opcionesOdontologo.some((op) => op.id === idOdontologo)
+        ? idOdontologo
+        : '';
 
   const citasFiltradas = useMemo(() => {
     const q = normalizar(busquedaPaciente);
@@ -646,38 +657,42 @@ export default function AgendaPage() {
       </div>
 
       <div className="flex flex-wrap gap-3">
-        <label className="relative min-w-[12rem] flex-1">
-          <span className="sr-only">Clínica</span>
-          <select
-            className={claseCampo}
-            value={idClinicaEfectivo}
-            onChange={(e) => setIdClinica(e.target.value)}
-          >
-            <option value="">Todas las clínicas</option>
-            {opcionesClinica.map((op) => (
-              <option key={op.id} value={op.id}>
-                {op.nombre}
-              </option>
-            ))}
-          </select>
-          <ChevronDown size={16} aria-hidden="true" className={claseFlechaSelect} />
-        </label>
-        <label className="relative min-w-[12rem] flex-1">
-          <span className="sr-only">Odontólogo</span>
-          <select
-            className={claseCampo}
-            value={idOdontologoEfectivo}
-            onChange={(e) => setIdOdontologo(e.target.value)}
-          >
-            <option value="">Todos los odontólogos</option>
-            {opcionesOdontologo.map((op) => (
-              <option key={op.id} value={op.id}>
-                {op.nombre}
-              </option>
-            ))}
-          </select>
-          <ChevronDown size={16} aria-hidden="true" className={claseFlechaSelect} />
-        </label>
+        {opcionesClinica.length > 1 && (
+          <label className="relative min-w-[12rem] flex-1">
+            <span className="sr-only">Clínica</span>
+            <select
+              className={claseCampo}
+              value={idClinicaEfectivo}
+              onChange={(e) => setIdClinica(e.target.value)}
+            >
+              <option value="">Todas las clínicas</option>
+              {opcionesClinica.map((op) => (
+                <option key={op.id} value={op.id}>
+                  {op.nombre}
+                </option>
+              ))}
+            </select>
+            <ChevronDown size={16} aria-hidden="true" className={claseFlechaSelect} />
+          </label>
+        )}
+        {!esOdontologo && opcionesOdontologo.length > 1 && (
+          <label className="relative min-w-[12rem] flex-1">
+            <span className="sr-only">Odontólogo</span>
+            <select
+              className={claseCampo}
+              value={idOdontologoEfectivo}
+              onChange={(e) => setIdOdontologo(e.target.value)}
+            >
+              <option value="">Todos los odontólogos</option>
+              {opcionesOdontologo.map((op) => (
+                <option key={op.id} value={op.id}>
+                  {op.nombre}
+                </option>
+              ))}
+            </select>
+            <ChevronDown size={16} aria-hidden="true" className={claseFlechaSelect} />
+          </label>
+        )}
         <label className="relative block min-w-[12rem] flex-1">
           <span className="sr-only">Buscar paciente</span>
           <Search
