@@ -373,10 +373,10 @@ export const agendarCitasApi = {
   odontologoFijo(idServicio) {
     return apiRequest("/api/agendar/odontologo-fijo", { method: "GET", query: { idservicio: idServicio } });
   },
-  horarios(idSede, fecha, idServicio) {
+  horarios(idSede, fecha, idServicio, idOdontologo) {
     return apiRequest("/api/agendar/disponibilidad", {
       method: "GET",
-      query: { idsede: idSede, fecha, idservicio: idServicio },
+      query: { idsede: idSede, fecha, idservicio: idServicio, idodontologo: idOdontologo },
     });
   },
   dias(idSede, dias, idOdontologo, idServicio) {
@@ -430,3 +430,24 @@ export const citasApi = {
   },
 };
 
+export const salaApi = {
+  llegada(idCita) {
+    return apiRequest(`/api/sala/citas/${idCita}/llegada`, { method: "POST" });
+  },
+  faltan5() {
+    return apiRequest("/api/sala/consulta/faltan-5", { method: "POST" });
+  },
+  terminar() {
+    return apiRequest("/api/sala/consulta/terminar", { method: "POST" });
+  },
+  llamarSiguiente() {
+    return apiRequest("/api/sala/consulta/llamar-siguiente", { method: "POST" });
+  },
+  crearTokenPantalla(idClinica) {
+    return apiRequest("/api/sala/pantalla-token", { method: "POST", body: { idClinica } });
+  },
+  // EventSource no admite headers, por eso la clave va en la URL
+  urlEventos(idClinica, key) {
+    return `${API_URL}/api/sala/${idClinica}/eventos?key=${encodeURIComponent(key)}`;
+  },
+};

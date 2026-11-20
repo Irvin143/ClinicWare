@@ -24,6 +24,9 @@ import UsuariosPage from "../modules/catalogos/usuarios/UsuariosPage.jsx";
 import PanelPacientePage from "../modules/panel/PanelPacientePage.jsx";
 import MisCItas from "../modules/panel/MisCitas.jsx";
 import AgendaPage from "../modules/agenda/AgendaPage.jsx";
+import PantallaSala from '../modules/sala/pantallaSala.jsx'; // ajusta la ruta según dónde pusiste el archivo
+
+// dentro de <Routes>, junto a tus otras rutas:
 
 function RedirigirInicio() {
   const destino = primeraRutaPermitida(getAuth()?.usuario);
@@ -34,6 +37,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
+        <Route path="/sala" element={<PantallaSala />} />
         {/* Públicas */}
         <Route path="/" element={<Login />} />
         <Route path="/registro" element={<Register />} />

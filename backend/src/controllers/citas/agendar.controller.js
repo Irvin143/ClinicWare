@@ -73,9 +73,9 @@ export const miOdontologo = async (req, res) => {
     }
 };
 
-// GET /agendar/disponibilidad?idsede=1&fecha=2026-10-28&idservicio=1
+// GET /agendar/disponibilidad?idsede=1&fecha=2026-10-28&idservicio=1&idodontologo=3
 export const listar = async (req, res) => {
-    const { idsede, fecha, idservicio } = req.query;
+    const { idsede, fecha, idservicio, idodontologo } = req.query;
 
     if (!idValido(idsede)) {
         return res.status(400).json({ error: 'idsede debe ser un entero positivo' });
@@ -86,13 +86,22 @@ export const listar = async (req, res) => {
     if (idServicioInvalido(idservicio)) {
         return res.status(400).json({ error: 'idservicio debe ser un entero positivo' });
     }
-    console.log('listar disponibilidad', { idsede, fecha, idservicio });
+    if (idodontologo !== undefined && !idValido(idodontologo)) {
+        return res.status(400).json({ error: 'idodontologo debe ser un entero positivo' });
+    }
+
     try {
         const fijo = await odontologoFijoDe(req, idservicio);
+        // El de cabecera del paciente manda; si no hay (admin reagendando), se usa el de la URL
+        const idOdontologo =
+            fijo?.id_odontologo ?? (idodontologo !== undefined ? Number(idodontologo) : null);
+
+        console.log('listar disponibilidad', { idsede, fecha, idservicio, idOdontologo });
         const disponibilidad = await agendarService.obtenerHorariosDisponibles({
             idClinica: Number(idsede),
             fecha,
-            idOdontologo: fijo?.id_odontologo ?? null,
+            idOdontologo,
+            idServicio: idservicio !== undefined ? Number(idservicio) : null,
         });
         res.json(disponibilidad);
     } catch (err) {
@@ -100,7 +109,6 @@ export const listar = async (req, res) => {
     }
 };
 
-// GET /agendar/dias-disponibles?idsede=1&dias=30&idservicio=1
 // Días con al menos un horario libre en la sede. Responde { dias: ['AAAA-MM-DD', ...] }
 export const listarDias = async (req, res) => {
     const { idsede, idservicio, idodontologo } = req.query;

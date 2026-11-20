@@ -155,6 +155,7 @@ export default function ReagendarCitaModal({ cita, onReagendada, onCerrar }) {
       .dias(cita.idSede, DIAS_A_CONSULTAR, cita.idOdontologo, cita.idServicio)
       .then((datos) => {
         if (cancelado) return;
+        console.log('dias', datos);
         setDiasLibres(extraerDias(datos));
         console.log(cita.idOdontologo)
         setErrorDias('');
@@ -206,7 +207,7 @@ export default function ReagendarCitaModal({ cita, onReagendada, onCerrar }) {
     setHoraElegida('');
     setProximoDia(null);
     try {
-      const datos = await agendarCitasApi.horarios(cita.idSede, dia, cita.idOdontologo, cita.idServicio);
+      const datos = await agendarCitasApi.horarios(cita.idSede, dia, cita.idServicio, cita.idOdontologo);
       if (id !== solicitud.current) return;
       setHorarios(soloFuturos(normalizarHorarios(datos), dia));
       setProximoDia(extraerProximoDia(datos));
