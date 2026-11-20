@@ -1,4 +1,4 @@
-import conexion from '../conexion.js'; // <-- AJUSTA: tu Pool de pg
+import conexion from '../conexion.js'; //
 import { emitir } from './salaEventos.js';
 // Fecha "de hoy" en la zona horaria de Culiacán
 const HOY = `(now() AT TIME ZONE 'America/Mazatlan')::date`;
@@ -63,7 +63,7 @@ export async function estadoSala(idClinica) {
   // después
   let clinica = null;
   try {
-    const { rows: cl } = await pool.query(
+    const { rows: cl } = await conexion.query(
       'SELECT nombre FROM clinicas WHERE idclinica = $1', // AJUSTA tabla/columnas si difieren
       [idClinica]
     );
@@ -146,7 +146,7 @@ async function llamarSiguienteTx(client, idOdontologo) {
 }
 
 async function enTransaccion(fn) {
-  const client = await pool.connect();
+  const client = await conexion.connect();
   try {
     await client.query('BEGIN');
     const resultado = await fn(client);

@@ -62,6 +62,7 @@ const ESTADOS_CITA = {
     atendida: 'ATENDIDA',
     cancelada: 'CANCELADA',
     no_asistio: 'NO_ASISTIO',
+    reagendada: 'REAGENDADA',
 };
 
 function normalizarEstadoCita(valor) {
@@ -184,7 +185,8 @@ export const cancelarMiCita = async (req, res) => {
 
         const idPaciente = await obtenerIdPaciente(idUsuarioDe(req));
         const cita = await cancelarCita({ idCita, idPaciente });
-        await notificarCitaPorCorreo(idCita, cancelada = true);
+        await notificarCitaPorCorreo(idCita, false, true);
+        console.log('notificarCitaPorCorreo', idCita, false, true);
 
         emitirPorCita(idCita).catch(console.error);
 
@@ -246,7 +248,10 @@ export const cambiarEstadoCita = async (req, res) => {
             estado,
             ...alcance,
         });
-
+        if(estado === ESTADOS_CITA.cancelada || estado === ESTADOS_CITA.no_asistio) {
+            await notificarCitaPorCorreo(idCita, false, true);
+        }
+        
         emitirPorCita(idCita).catch(console.error);
 
         res.json(cita);
