@@ -139,7 +139,7 @@ export async function cambiarEstadoCita({
     if (ESTADOS_DE_LLEGADA.includes(estado) && cita.muy_temprano) {
         throw errorHttp(409, 'Solo se puede marcar la llegada hasta 2 horas antes de la cita.');
     }
-    
+
     // Regla: a "En consulta" solo se llega desde "En sala"
     if (estado === 'EN_CONSULTA' && cita.estado_actual !== 'EN_SALA') {
         throw errorHttp(409, 'Para pasar a consulta, el paciente primero debe estar en sala.');
@@ -157,6 +157,19 @@ export async function cambiarEstadoCita({
         throw errorHttp(409, 'No se puede cambiar el estado de una cita que ya fue atendida o marcada como no asistió.');
     }
 
+    if (estado === 'EN_CONSULTA') {
+        const { rows: ocupado } = await conexion.query(
+            `SELECT 1 FROM citas
+            WHERE idOdontologo = (SELECT idOdontologo FROM citas WHERE idCita = $1::int)
+            AND upper(estado) = 'EN_CONSULTA' AND idCita <> $1::int
+            LIMIT 1`,
+            [idCita]
+        );
+        if (ocupado[0]) {
+            throw errorHttp(409, 'Ya tienes un paciente en consulta. Termínala antes de iniciar otra.');
+        }
+    }
+
     // Atendida / no asistió: solo si la cita ya ocurrió o el paciente ya estaba en sala o en consulta
     const yaEstabaAdentro = ESTADOS_DE_LLEGADA.includes(cita.estado_actual);
     if (ESTADOS_SOLO_DESPUES_DE_LA_CITA.includes(estado) && cita.futura && !yaEstabaAdentro) {
@@ -165,11 +178,27 @@ export async function cambiarEstadoCita({
     }
 
     const { rows: actualizadas } = await conexion.query(
-        `UPDATE citas
-         SET estado = $2
-         WHERE idCita = $1::int
-         RETURNING idCita AS id, estado`,
-        [idCita, estado]
+    `UPDATE citas
+     SET estado = $2::varchar,
+         hora_llegada = CASE
+             WHEN $2::text = 'EN_SALA' THEN now()
+             WHEN $2::text IN ('PENDIENTE', 'CONFIRMADA') THEN NULL
+             ELSE hora_llegada END,
+         inicio_consulta = CASE
+             WHEN $2::text = 'EN_CONSULTA' THEN now()
+             WHEN $2::text IN ('PENDIENTE', 'CONFIRMADA', 'EN_SALA') THEN NULL
+             ELSE inicio_consulta END,
+         fin_consulta = CASE
+             WHEN $2::text = 'ATENDIDA' AND inicio_consulta IS NOT NULL THEN now()
+             WHEN $2::text IN ('PENDIENTE', 'CONFIRMADA', 'EN_SALA', 'EN_CONSULTA') THEN NULL
+             ELSE fin_consulta END,
+         aviso_5min = CASE
+             WHEN $2::text IN ('PENDIENTE', 'CONFIRMADA', 'EN_SALA') THEN false
+             ELSE aviso_5min END
+     WHERE idCita = $1::int
+       AND upper(estado) = $3
+     RETURNING idCita AS id, estado`,
+    [idCita, estado, cita.estado_actual]
     );
     return actualizadas[0];
 }
@@ -317,30 +346,29 @@ export async function reagendarCitaPersonal({
 
 const MINUTOS_ANTICIPACION = 120; // máximo de anticipación para marcar la llegada
 
-export const marcarLlegada = async ({ idCita, enSala, idClinica = null }) => {
+export const marcarLlegada = async ({ idCita, enSala, idsClinica = null }) => {
     const desde = enSala ? ['PENDIENTE', 'CONFIRMADA'] : ['EN_SALA'];
     const hacia = enSala ? 'EN_SALA' : 'PENDIENTE';
 
     const { rows } = await conexion.query(
         `UPDATE citas c
-         SET estado = $2
+         SET estado = $2,
+             hora_llegada = CASE WHEN $5::boolean THEN now() ELSE NULL END
          FROM clinica_servicio cs
          WHERE c.idCita = $1::int
            AND cs.idClinica_Servicio = c.idClinica_Servicio
-           AND ($4::int IS NULL OR cs.idClinica = $4::int)
+           AND ($4::int[] IS NULL OR cs.idClinica = ANY($4::int[]))
            AND upper(c.estado) = ANY($3::text[])
            AND c.fecha = (now() AT TIME ZONE '${ZONA}')::date
            AND ($5::boolean = false
                 OR (c.fecha + c.hora) <= (now() AT TIME ZONE '${ZONA}') + make_interval(mins => $6::int))
          RETURNING c.idCita AS id_cita, c.estado`,
-        [idCita, hacia, desde, idClinica, enSala, MINUTOS_ANTICIPACION]
+        [idCita, hacia, desde, idsClinica, enSala, MINUTOS_ANTICIPACION]
     );
     if (rows[0]) return rows[0];
 
-    // No se actualizó nada: se revisa el motivo para dar un mensaje claro
     const { rows: d } = await conexion.query(
-        `SELECT upper(c.estado) AS estado,
-                cs.idClinica AS id_clinica,
+        `SELECT cs.idClinica AS id_clinica,
                 ((c.fecha + c.hora) > (now() AT TIME ZONE '${ZONA}') + make_interval(mins => $2::int)) AS muy_temprano
          FROM citas c
          JOIN clinica_servicio cs ON cs.idClinica_Servicio = c.idClinica_Servicio
@@ -348,15 +376,11 @@ export const marcarLlegada = async ({ idCita, enSala, idClinica = null }) => {
         [idCita, MINUTOS_ANTICIPACION]
     );
 
-    // No existe o es de otra clínica: mismo mensaje para no revelar datos ajenos
-    if (!d[0] || (idClinica != null && d[0].id_clinica !== idClinica)) {
+    if (!d[0] || (Array.isArray(idsClinica) && !idsClinica.includes(d[0].id_clinica))) {
         throw errorHttp(404, 'La cita no existe');
     }
     if (enSala && d[0].muy_temprano) {
-        throw errorHttp(
-            409,
-            'Solo se puede marcar la llegada hasta 2 horas antes de la cita.'
-        );
+        throw errorHttp(409, 'Solo se puede marcar la llegada hasta 2 horas antes de la cita.');
     }
     throw errorHttp(409, 'No se puede cambiar el estado de esta cita');
 };

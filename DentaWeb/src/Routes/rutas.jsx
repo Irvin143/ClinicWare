@@ -25,6 +25,8 @@ import PanelPacientePage from "../modules/panel/PanelPacientePage.jsx";
 import MisCItas from "../modules/panel/MisCitas.jsx";
 import AgendaPage from "../modules/agenda/AgendaPage.jsx";
 import PantallaSala from '../modules/sala/pantallaSala.jsx'; // ajusta la ruta según dónde pusiste el archivo
+import MiDiaOdontologo from "../modules/catalogos/odontologos/MiDiaOdontologo.jsx";
+import PantallaSalaAcceso from "../modules/sala/pantallaSalaAcceso.jsx";
 
 // dentro de <Routes>, junto a tus otras rutas:
 
@@ -50,6 +52,8 @@ export default function App() {
         {/* Protegidas: comparten MainLayout + Sidebar */}
         <Route element={<ProtectedLayout />}>
           <Route path="/panel" element={<RedirigirInicio />} />
+          <Route path="/mi-dia" element={<MiDiaOdontologo />} /> 
+          <Route path="/pantalla-sala" element={<PantallaSalaAcceso />} /> 
           <Route path="/inicio" element={<PanelPacientePage />} />
           <Route path="/panel-paciente" element={<Navigate to="/inicio" replace />} />
           <Route path="/mis-citas" element={<MisCItas />} />

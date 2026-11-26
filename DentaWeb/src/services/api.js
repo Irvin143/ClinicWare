@@ -431,12 +431,15 @@ export const citasApi = {
   marcarLlegada(id, enSala) {
     return apiRequest(`/api/citas/${id}/llegada`, { method: "PATCH", body: { en_sala: enSala } });
   },
+  miDia() {
+    return apiRequest('/api/citas/mi-dia', { method: 'GET' });
+  },
+  avisarCincoMin(id) {
+    return apiRequest(`/api/citas/${id}/aviso-5min`, { method: 'PATCH' });
+  },
 };
 
 export const salaApi = {
-  llegada(idCita) {
-    return apiRequest(`/api/sala/citas/${idCita}/llegada`, { method: "POST" });
-  },
   faltan5() {
     return apiRequest("/api/sala/consulta/faltan-5", { method: "POST" });
   },
@@ -452,5 +455,8 @@ export const salaApi = {
   // EventSource no admite headers, por eso la clave va en la URL
   urlEventos(idClinica, key) {
     return `${API_URL}/api/sala/${idClinica}/eventos?key=${encodeURIComponent(key)}`;
+  },
+  misClinicas() {
+    return apiRequest("/api/sala/mis-clinicas", { method: "GET" });
   },
 };

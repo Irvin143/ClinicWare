@@ -77,11 +77,11 @@ function normalizarEstadoCita(valor) {
     return ESTADOS_CITA[clave] ?? null;
 }
 
-async function alcancePersonal(usuario) {
+export async function alcancePersonal(usuario) {
     const esAdmin = tieneIdentidad(usuario, 'admin');
     const esOdontologo = tieneIdentidad(usuario, 'odontologo');
     const esClinica = tieneIdentidad(usuario, 'clinica');
-
+    
     if (esAdmin) return { idOdontologo: null, idsClinica: null };
     if (esOdontologo) {
         const id = await agendaPersonal.idOdontologoDeUsuario(usuario.sub);
@@ -274,19 +274,20 @@ export const marcarLlegadaCita = async (req, res) => {
             return res.status(400).json({ error: 'en_sala debe ser true o false' });
         }
 
-        // Solo personal (clínica / admin). Los pacientes no pueden marcar llegadas.
         if (!esPersonal(req.usuario)) {
             return res.status(403).json({ error: 'No tienes permiso para esta acción' });
         }
 
         const alcance = await alcancePersonal(req.usuario);
-        console.log('marcarLlegadaCita', { alcance });
+        // El odontólogo no marca llegadas; lo hace la clínica (o el admin)
+        if (alcance.idOdontologo != null) {
+            return res.status(403).json({ error: 'Solo la clínica puede marcar la llegada del paciente' });
+        }
         const resultado = await agendaPersonal.marcarLlegada({
             idCita,
             enSala,
-            idClinica: alcance.idClinica ?? null,
+            idsClinica: alcance.idsClinica, // null = admin, sin restricción
         });
-
         emitirPorCita(idCita).catch(console.error); // avisa en tiempo real
 
         res.json(resultado); // { id_cita, estado }

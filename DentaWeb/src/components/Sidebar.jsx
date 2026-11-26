@@ -27,6 +27,8 @@ const navItems = [
   { path: '/roles', label: 'Roles', icon: Shield },
   { path: '/tipos-usuario', label: 'Tipos de usuario', icon: IdCard },
   { path: '/usuarios', label: 'Usuarios', icon: UserCog },
+  { path: '/mi-dia', label: 'Mi día', icon: UserCog },
+  { path: '/pantalla-sala', label: 'Pantalla de sala', icon: UserCog }
 ];
 
 function presentarPalabra(texto) {

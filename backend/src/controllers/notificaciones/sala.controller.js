@@ -1,6 +1,7 @@
 import jwt from 'jsonwebtoken';
 import { suscribir } from '../../services/notificaciones/salaEventos.js';
 import * as sala from '../../services/notificaciones/salaServices.js';
+import { alcancePersonal } from '../citas/misCItas.controller.js';
 
 // AJUSTA: usa tu responderError si ya tienes uno
 function responderError(res, error) {
@@ -30,11 +31,15 @@ export const eventosSala = async (req, res) => {
   }
 };
 
-// Un administrador genera el enlace que se abre en la TV
-export const crearTokenPantalla = (req, res) => {
+export const crearTokenPantalla = async (req, res) => {
   try {
     const idClinica = entero(req.body?.idClinica, 'La clínica');
-    // Sin "sub": este token NO sirve para el resto de tu API (leerToken lo rechaza)
+    const alcance = await alcancePersonal(req.usuario);
+
+    // idsClinica = null es el admin (cualquier sede); la clínica solo las suyas
+    if (Array.isArray(alcance.idsClinica) && !alcance.idsClinica.includes(idClinica)) {
+      throw new sala.ErrorSala('Esa clínica no es tuya', 403);
+    };
     const token = jwt.sign({ scope: 'pantalla', idClinica }, process.env.JWT_SECRET, {
       algorithm: 'HS256',
       expiresIn: '365d',
@@ -43,13 +48,6 @@ export const crearTokenPantalla = (req, res) => {
   } catch (error) {
     responderError(res, error);
   }
-};
-
-// ---- Acciones ----
-export const llegada = async (req, res) => {
-  try {
-    res.json(await sala.marcarLlegada(entero(req.params.id, 'El id de la cita')));
-  } catch (error) { responderError(res, error); }
 };
 
 const accionDoctor = (fn) => async (req, res) => {
@@ -62,3 +60,13 @@ const accionDoctor = (fn) => async (req, res) => {
 export const faltan5 = accionDoctor(sala.faltan5);
 export const terminar = accionDoctor(sala.terminar);
 export const llamarSiguiente = accionDoctor(sala.llamarSiguiente);
+
+export const misClinicas = async (req, res) => {
+  try {
+    const alcance = await alcancePersonal(req.usuario);
+
+    res.json(await sala.clinicasDeAlcance(alcance.idsClinica));
+  } catch (error) {
+    responderError(res, error);
+  }
+};

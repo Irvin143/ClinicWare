@@ -17,6 +17,8 @@ export const PERMISOS_RUTAS = {
     '/roles':            ['admin'],
     '/tipos-usuario':    ['admin'],
     '/usuarios':         ['admin'],
+    '/mi-dia':           ['odontologo'],
+    '/pantalla-sala':    ['clinica'],
 };
 
 // Minúsculas, sin acentos y sin espacios sobrantes. Acepta strings u objetos { nombre }.

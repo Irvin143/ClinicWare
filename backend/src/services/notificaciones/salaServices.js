@@ -102,32 +102,6 @@ export async function idOdontologoDeUsuario(idUsuario) {
 
 // ---------- Acciones ----------
 
-// 1. Recepción: el paciente llegó
-export async function marcarLlegada(idCita) {
-  const { rowCount } = await conexion.query(
-    `UPDATE citas SET estado = 'EN_SALA', hora_llegada = now()
-      WHERE idcita = $1
-        AND estado IN ('PENDIENTE', 'CONFIRMADA')
-        AND fecha = ${HOY}`,
-    [idCita]
-  );
-  if (!rowCount) {
-    throw new ErrorSala('La cita no es de hoy o ya no está pendiente/confirmada', 409);
-  }
-  return emitirPorCita(idCita);
-}
-
-// 2. Doctor: "Faltan 5 min" (se guarda en la cita que está en consulta)
-export async function faltan5(idOdontologo) {
-  const { rows } = await conexion.query(
-    `UPDATE citas SET aviso_5min = true
-      WHERE idodontologo = $1 AND estado = 'EN_CONSULTA'
-      RETURNING idcita`,
-    [idOdontologo]
-  );
-  if (!rows[0]) throw new ErrorSala('No tienes ningún paciente en consulta', 409);
-  return emitirPorCita(rows[0].idcita);
-}
 
 // Pasa al primer EN_SALA (por hora) a EN_CONSULTA. Devuelve la cita o null.
 async function llamarSiguienteTx(client, idOdontologo) {
@@ -191,4 +165,26 @@ export async function llamarSiguiente(idOdontologo) {
     return sig.idcita;
   });
   return emitirPorCita(idRef);
+}
+
+export async function clinicasDeAlcance(idsClinica) {
+  const { rows } = await conexion.query(
+    `SELECT idclinica AS id_clinica, nombre
+       FROM clinicas
+      WHERE ($1::int[] IS NULL OR idclinica = ANY($1::int[]))
+      ORDER BY nombre`,
+    [idsClinica]
+  );
+  return rows;
+}
+
+export async function faltan5(idOdontologo) {
+  const { rows } = await conexion.query(
+    `UPDATE citas SET aviso_5min = true
+      WHERE idodontologo = $1 AND estado = 'EN_CONSULTA'
+      RETURNING idcita`,
+    [idOdontologo]
+  );
+  if (!rows[0]) throw new ErrorSala('Solo puedes avisar en una cita que está en consulta', 409);
+  return emitirPorCita(rows[0].idcita);
 }

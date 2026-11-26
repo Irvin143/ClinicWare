@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { cancelarMiCita, cambiarEstadoCita, listarMisCitas, reagendarMiCita, marcarLlegadaCita } from '../../controllers/citas/misCItas.controller.js';
+import { miDia } from '../../controllers/citas/miDia.controller.js';
 // TODO: ajusta la ruta al archivo donde tienes exigirSesion
 import { exigirSesion } from '../../middleware/auth.js';
 
@@ -9,9 +10,11 @@ const router = Router();
 router.use(exigirSesion);
 
 router.get('/', listarMisCitas); //                  GET   /api/citas
+// router.patch('/:id/aviso-5min', avisoCincoMin);
 router.patch('/:id/cancelar', cancelarMiCita); //    PATCH /api/citas/:id/cancelar
 router.patch('/:id/reagendar', reagendarMiCita); //  PATCH /api/citas/:id/reagendar  { fecha, hora }
 router.patch('/:id/estado', cambiarEstadoCita); //    PATCH /api/citas/:id/estado     { estado }
 router.patch('/:id/llegada', marcarLlegadaCita);
+router.get('/mi-dia', miDia);              // antes de '/:id'
 
 export default router;

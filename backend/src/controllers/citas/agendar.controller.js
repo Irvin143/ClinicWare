@@ -96,7 +96,6 @@ export const listar = async (req, res) => {
         const idOdontologo =
             fijo?.id_odontologo ?? (idodontologo !== undefined ? Number(idodontologo) : null);
 
-        console.log('listar disponibilidad', { idsede, fecha, idservicio, idOdontologo });
         const disponibilidad = await agendarService.obtenerHorariosDisponibles({
             idClinica: Number(idsede),
             fecha,
