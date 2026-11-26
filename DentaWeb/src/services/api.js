@@ -428,6 +428,9 @@ export const citasApi = {
   cambiarEstado(id, estado) {
     return apiRequest(`/api/citas/${id}/estado`, { method: "PATCH", body: { estado } });
   },
+  marcarLlegada(id, enSala) {
+    return apiRequest(`/api/citas/${id}/llegada`, { method: "PATCH", body: { en_sala: enSala } });
+  },
 };
 
 export const salaApi = {

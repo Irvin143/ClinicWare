@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { AlertTriangle, ArrowRight, Calendar, CalendarClock, Clock, Hospital, Stethoscope, User, X } from 'lucide-react';
-import { BadgeEstado, OPCIONES_ESTADO_CITA, etiquetaEstado, estadoParaApi, claseEstado } from '../../utils/estadoCita.jsx';
+import { AlertTriangle, ArrowRight, Calendar, CalendarClock, Clock, DoorOpen, Hospital, Stethoscope, User, X } from 'lucide-react';
+import { BadgeEstado, OPCIONES_ESTADO_CITA, etiquetaEstado, estadoParaApi } from '../../utils/estadoCita.jsx';
 import { citasApi } from '../../services/api.js';
 import ModalConfirmacion from '../../components/ModalConfirmacion.jsx';
+import { ToastContainer } from '../../components/Toast.jsx';
 // AJUSTA esta ruta a donde tengas ReagendarCitaModal en tu proyecto
 import ReagendarCitaModal from '../panel/misCita/ModalReagendar.jsx';
 
@@ -50,6 +51,9 @@ const textoOpcional = (valor) => {
 
 const esUrgencia = (cita) => /urgenc/i.test(String(cita?.tipo ?? ''));
 
+// 'AAAA-MM-DD' de hoy en la zona de las sedes
+const hoyEnZona = () => new Intl.DateTimeFormat('en-CA', { timeZone: ZONA }).format(new Date());
+
 function ahoraEnZona() {
   const partes = new Intl.DateTimeFormat('en-CA', {
     timeZone: ZONA,
@@ -73,28 +77,77 @@ function citaYaOcurrio(cita) {
 
 // Clases de fondo de píldora por estado (para el selector visual)
 const CLASES_PILDORA = {
-  PENDIENTE:  'border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-800 dark:bg-amber-950/60 dark:text-amber-200',
-  CONFIRMADA: 'border-sky-300 bg-sky-50 text-sky-900 dark:border-sky-800 dark:bg-sky-950/60 dark:text-sky-200',
-  ATENDIDA:   'border-teal-300 bg-teal-50 text-teal-900 dark:border-teal-800 dark:bg-teal-950/60 dark:text-teal-200',
-  CANCELADA:  'border-rose-300 bg-rose-50 text-rose-900 dark:border-rose-800 dark:bg-rose-950/60 dark:text-rose-200',
-  NO_ASISTIO: 'border-purple-300 bg-purple-50 text-purple-900 dark:border-purple-800 dark:bg-purple-950/60 dark:text-purple-200',
+  PENDIENTE:   'border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-800 dark:bg-amber-950/60 dark:text-amber-200',
+  CONFIRMADA:  'border-sky-300 bg-sky-50 text-sky-900 dark:border-sky-800 dark:bg-sky-950/60 dark:text-sky-200',
+  EN_SALA:     'border-cyan-300 bg-cyan-50 text-cyan-900 dark:border-cyan-800 dark:bg-cyan-950/60 dark:text-cyan-200',
+  EN_CONSULTA: 'border-indigo-300 bg-indigo-50 text-indigo-900 dark:border-indigo-800 dark:bg-indigo-950/60 dark:text-indigo-200',
+  ATENDIDA:    'border-teal-300 bg-teal-50 text-teal-900 dark:border-teal-800 dark:bg-teal-950/60 dark:text-teal-200',
+  CANCELADA:   'border-rose-300 bg-rose-50 text-rose-900 dark:border-rose-800 dark:bg-rose-950/60 dark:text-rose-200',
+  NO_ASISTIO:  'border-purple-300 bg-purple-50 text-purple-900 dark:border-purple-800 dark:bg-purple-950/60 dark:text-purple-200',
 };
 
 const CLASES_PILDORA_ACTIVA = {
-  PENDIENTE:  'ring-2 ring-amber-500 ring-offset-1 dark:ring-offset-slate-900',
-  CONFIRMADA: 'ring-2 ring-sky-500 ring-offset-1 dark:ring-offset-slate-900',
-  ATENDIDA:   'ring-2 ring-teal-500 ring-offset-1 dark:ring-offset-slate-900',
-  CANCELADA:  'ring-2 ring-rose-500 ring-offset-1 dark:ring-offset-slate-900',
-  NO_ASISTIO: 'ring-2 ring-purple-500 ring-offset-1 dark:ring-offset-slate-900',
+  PENDIENTE:   'ring-2 ring-amber-500 ring-offset-1 dark:ring-offset-slate-900',
+  CONFIRMADA:  'ring-2 ring-sky-500 ring-offset-1 dark:ring-offset-slate-900',
+  EN_SALA:     'ring-2 ring-cyan-500 ring-offset-1 dark:ring-offset-slate-900',
+  EN_CONSULTA: 'ring-2 ring-indigo-500 ring-offset-1 dark:ring-offset-slate-900',
+  ATENDIDA:    'ring-2 ring-teal-500 ring-offset-1 dark:ring-offset-slate-900',
+  CANCELADA:   'ring-2 ring-rose-500 ring-offset-1 dark:ring-offset-slate-900',
+  NO_ASISTIO:  'ring-2 ring-purple-500 ring-offset-1 dark:ring-offset-slate-900',
 };
 
 const ES_DESTRUCTIVO = { CANCELADA: true, NO_ASISTIO: true };
 
 // Estados que solo se pueden aplicar cuando ya pasó la hora de la cita
+// (o cuando el paciente ya está en sala / en consulta)
 const SOLO_DESPUES_DE_LA_CITA = { ATENDIDA: true, NO_ASISTIO: true };
 
 // Estados en los que todavía tiene sentido cambiar la fecha u hora
 const REAGENDABLES = { PENDIENTE: true, CONFIRMADA: true };
+
+// Estados desde los que la secretaria puede marcar / deshacer la llegada
+const MARCABLES_LLEGADA = ['PENDIENTE', 'CONFIRMADA', 'EN_SALA'];
+
+/* ---------- Toasts (para ToastContainer) ---------- */
+// Cada toast: { id, tipo: 'exito' | 'error', mensaje, visible }
+function useToasts() {
+  const [toasts, setToasts] = useState([]);
+  const siguienteId = useRef(0);
+  const temporizadores = useRef(new Set());
+
+  const programar = useCallback((fn, ms) => {
+    const t = setTimeout(() => {
+      temporizadores.current.delete(t);
+      fn();
+    }, ms);
+    temporizadores.current.add(t);
+  }, []);
+
+  useEffect(() => {
+    const pendientes = temporizadores.current;
+    return () => pendientes.forEach(clearTimeout);
+  }, []);
+
+  const cerrar = useCallback(
+    (id) => {
+      setToasts((actuales) => actuales.map((t) => (t.id === id ? { ...t, visible: false } : t)));
+      programar(() => setToasts((actuales) => actuales.filter((t) => t.id !== id)), 300);
+    },
+    [programar],
+  );
+
+  const mostrar = useCallback(
+    (tipo, mensaje, duracion = 5000) => {
+      const id = ++siguienteId.current;
+      setToasts((actuales) => [...actuales, { id, tipo, mensaje, visible: false }]);
+      programar(() => setToasts((actuales) => actuales.map((t) => (t.id === id ? { ...t, visible: true } : t))), 20);
+      programar(() => cerrar(id), duracion);
+    },
+    [programar, cerrar],
+  );
+
+  return { toasts, mostrar, cerrar };
+}
 
 function InfoFila({ icono, etiqueta, valor }) {
   if (!valor) return null;
@@ -115,21 +168,23 @@ export default function ModalDetalleCita({ cita, onCerrar, onGuardado, onReagend
   const reagendandoRef = useRef(false);
   cerrarRef.current = onCerrar;
 
-  const yaOcurrio = citaYaOcurrio(cita);
   const estadoActual = estadoParaApi(cita?.estado);
+  const enSalaOConsulta = ['EN_SALA', 'EN_CONSULTA'].includes(estadoActual);
+  // Si el paciente ya está en sala o en consulta, se puede cerrar la cita aunque no haya llegado la hora
+  const yaOcurrio = citaYaOcurrio(cita) || enSalaOConsulta;
   const estadoInvalidoPorFecha = Boolean(SOLO_DESPUES_DE_LA_CITA[estadoActual]) && !yaOcurrio;
   const valorInicial = estadoInvalidoPorFecha ? '' : (estadoActual ?? '');
 
   const [estadoElegido, setEstadoElegido] = useState(valorInicial);
   const [guardando, setGuardando] = useState(false);
-  const [error, setError] = useState(null);
+  const [marcando, setMarcando] = useState(false);
+  const { toasts, mostrar, cerrar: cerrarToast } = useToasts();
   const [confirmacionAbierta, setConfirmacionAbierta] = useState(false);
   const [reagendando, setReagendando] = useState(false);
   reagendandoRef.current = reagendando;
 
   useEffect(() => {
     setEstadoElegido(valorInicial);
-    setError(null);
   }, [cita?.id_cita, valorInicial]);
 
   useEffect(() => {
@@ -180,13 +235,32 @@ export default function ModalDetalleCita({ cita, onCerrar, onGuardado, onReagend
     if (id == null) return;
     try {
       setGuardando(true);
-      setError(null);
       const actualizada = await citasApi.cambiarEstado(id, estadoElegido);
       onGuardado?.(actualizada);
     } catch (err) {
-      setError(err.message || 'No se pudo guardar el estado.');
+      mostrar('error', err.message || 'No se pudo guardar el estado.');
     } finally {
       setGuardando(false);
+    }
+  };
+
+  // Llegada del paciente: la secretaria marca (o deshace) que ya está en la sala
+  const enSala = estadoActual === 'EN_SALA';
+  const puedeMarcarLlegada =
+    MARCABLES_LLEGADA.includes(estadoActual) &&
+    String(cita?.fecha ?? '').slice(0, 10) === hoyEnZona() &&
+    cita?.id_cita != null;
+
+  const alternarLlegada = async () => {
+    if (marcando || guardando) return;
+    try {
+      setMarcando(true);
+      const r = await citasApi.marcarLlegada(cita.id_cita, !enSala);
+      onGuardado?.({ ...cita, estado: r.estado });
+    } catch (err) {
+      mostrar('error', err.message || 'No se pudo actualizar la llegada.');
+    } finally {
+      setMarcando(false);
     }
   };
 
@@ -212,7 +286,6 @@ export default function ModalDetalleCita({ cita, onCerrar, onGuardado, onReagend
     const fechaActual = new Date(
       `${String(cita.fecha ?? '').slice(0, 10)}T${horaCorta(cita.hora)}`
     );
-    console.log('citaParaReagendar', { fechaActual, cita }, cita.odontologo?.id_odontologo);
     return {
       id: cita.id_cita,
       idSede,
@@ -222,7 +295,6 @@ export default function ModalDetalleCita({ cita, onCerrar, onGuardado, onReagend
       motivo: textoOpcional(cita.servicio) ?? textoOpcional(cita.tipo) ?? 'Cita',
       doctor: nombreCompleto(cita.odontologo, 'el odontólogo'),
     };
-
   }, [cita, idSede]);
 
   // Texto del modal de confirmación
@@ -334,16 +406,37 @@ export default function ModalDetalleCita({ cita, onCerrar, onGuardado, onReagend
               )}
             </div>
 
-            {puedeReagendar && (
-              <button
-                type="button"
-                onClick={() => setReagendando(true)}
-                disabled={guardando}
-                className="mt-3 inline-flex cursor-pointer items-center gap-2 rounded-xl border border-outline-variant px-3 py-2 text-sm font-medium text-on-surface transition-colors hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                <CalendarClock size={16} aria-hidden="true" />
-                Reagendar cita
-              </button>
+            {(puedeReagendar || puedeMarcarLlegada) && (
+              <div className="mt-3 flex flex-wrap gap-2">
+                {puedeReagendar && (
+                  <button
+                    type="button"
+                    onClick={() => setReagendando(true)}
+                    disabled={guardando || marcando}
+                    className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-outline-variant px-3 py-2 text-sm font-medium text-on-surface transition-colors hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    <CalendarClock size={16} aria-hidden="true" />
+                    Reagendar cita
+                  </button>
+                )}
+
+                {puedeMarcarLlegada && (
+                  <button
+                    type="button"
+                    onClick={alternarLlegada}
+                    disabled={marcando || guardando}
+                    aria-pressed={enSala}
+                    className={`inline-flex cursor-pointer items-center gap-2 rounded-xl border px-3 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
+                      enSala
+                        ? 'border-cyan-300 bg-cyan-50 text-cyan-900 dark:border-cyan-800 dark:bg-cyan-950/60 dark:text-cyan-200'
+                        : 'border-outline-variant text-on-surface hover:bg-surface-container'
+                    }`}
+                  >
+                    <DoorOpen size={16} aria-hidden="true" />
+                    {marcando ? 'Guardando…' : enSala ? 'En sala (deshacer)' : 'Paciente en sala'}
+                  </button>
+                )}
+              </div>
             )}
 
             {observaciones && (
@@ -389,7 +482,6 @@ export default function ModalDetalleCita({ cita, onCerrar, onGuardado, onReagend
                       onClick={() => {
                         if (!opcion.deshabilitada) {
                           setEstadoElegido(opcion.valor);
-                          setError(null);
                         }
                       }}
                       className={`cursor-pointer rounded-full border px-3 py-1.5 text-xs font-semibold transition-all focus:outline-none focus-visible:ring-2
@@ -407,13 +499,7 @@ export default function ModalDetalleCita({ cita, onCerrar, onGuardado, onReagend
               {!yaOcurrio && (
                 <p className="mt-2 flex items-center gap-1 text-xs text-on-surface-variant">
                   <AlertTriangle size={11} className="shrink-0 text-yellow-600" aria-hidden="true" />
-                  «Atendida» y «No asistió» solo estarán disponibles cuando haya pasado la hora de la cita.
-                </p>
-              )}
-
-              {error && (
-                <p className="mt-2 rounded-lg bg-error-container px-3 py-2 text-sm text-error" role="alert">
-                  {error}
+                  «Atendida» y «No asistió» solo estarán disponibles cuando haya pasado la hora de la cita o el paciente esté en sala.
                 </p>
               )}
             </div>
@@ -431,7 +517,7 @@ export default function ModalDetalleCita({ cita, onCerrar, onGuardado, onReagend
             <button
               type="button"
               onClick={confirmarGuardar}
-              disabled={!puedeGuardar || guardando}
+              disabled={!puedeGuardar || guardando || marcando}
               className="cursor-pointer rounded-xl bg-primary px-4 py-2 text-sm font-medium text-on-primary transition-opacity disabled:cursor-not-allowed disabled:opacity-50"
             >
               {guardando ? 'Guardando…' : 'Aplicar cambio'}
@@ -465,6 +551,10 @@ export default function ModalDetalleCita({ cita, onCerrar, onGuardado, onReagend
           />
         </div>
       )}
+      {/* Toasts: nivel de apilado propio para quedar sobre todos los modales */}
+      <div className="relative z-[80]">
+        <ToastContainer toasts={toasts} onCerrar={cerrarToast} />
+      </div>
     </>,
     document.body
   );

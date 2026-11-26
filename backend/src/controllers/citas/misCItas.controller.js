@@ -63,6 +63,8 @@ const ESTADOS_CITA = {
     cancelada: 'CANCELADA',
     no_asistio: 'NO_ASISTIO',
     reagendada: 'REAGENDADA',
+    en_sala: 'EN_SALA',
+    en_consulta: 'EN_CONSULTA',
 };
 
 function normalizarEstadoCita(valor) {
@@ -255,6 +257,39 @@ export const cambiarEstadoCita = async (req, res) => {
         emitirPorCita(idCita).catch(console.error);
 
         res.json(cita);
+    } catch (error) {
+        responderError(res, error);
+    }
+};
+
+export const marcarLlegadaCita = async (req, res) => {
+    try {
+        const idCita = Number.parseInt(req.params.id, 10);
+        if (!Number.isInteger(idCita)) {
+            return res.status(400).json({ error: 'El id de la cita no es válido' });
+        }
+
+        const enSala = req.body?.en_sala;
+        if (typeof enSala !== 'boolean') {
+            return res.status(400).json({ error: 'en_sala debe ser true o false' });
+        }
+
+        // Solo personal (clínica / admin). Los pacientes no pueden marcar llegadas.
+        if (!esPersonal(req.usuario)) {
+            return res.status(403).json({ error: 'No tienes permiso para esta acción' });
+        }
+
+        const alcance = await alcancePersonal(req.usuario);
+        console.log('marcarLlegadaCita', { alcance });
+        const resultado = await agendaPersonal.marcarLlegada({
+            idCita,
+            enSala,
+            idClinica: alcance.idClinica ?? null,
+        });
+
+        emitirPorCita(idCita).catch(console.error); // avisa en tiempo real
+
+        res.json(resultado); // { id_cita, estado }
     } catch (error) {
         responderError(res, error);
     }

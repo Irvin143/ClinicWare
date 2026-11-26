@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { cancelarMiCita, cambiarEstadoCita, listarMisCitas, reagendarMiCita } from '../../controllers/citas/misCItas.controller.js';
+import { cancelarMiCita, cambiarEstadoCita, listarMisCitas, reagendarMiCita, marcarLlegadaCita } from '../../controllers/citas/misCItas.controller.js';
 // TODO: ajusta la ruta al archivo donde tienes exigirSesion
 import { exigirSesion } from '../../middleware/auth.js';
 
@@ -12,5 +12,6 @@ router.get('/', listarMisCitas); //                  GET   /api/citas
 router.patch('/:id/cancelar', cancelarMiCita); //    PATCH /api/citas/:id/cancelar
 router.patch('/:id/reagendar', reagendarMiCita); //  PATCH /api/citas/:id/reagendar  { fecha, hora }
 router.patch('/:id/estado', cambiarEstadoCita); //    PATCH /api/citas/:id/estado     { estado }
+router.patch('/:id/llegada', marcarLlegadaCita);
 
 export default router;
