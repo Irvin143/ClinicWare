@@ -278,6 +278,7 @@ export default function MiDiaOdontologo() {
                     ) : (
                       <CheckCheck size={18} aria-hidden="true" />
                     )}
+                    Termine
                   </button>
                 </div>
               </div>
