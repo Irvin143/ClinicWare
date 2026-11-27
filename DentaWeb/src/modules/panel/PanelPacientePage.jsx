@@ -151,7 +151,10 @@ export default function PanelPacientePage() {
 
   const ahoraMs = new Date().getTime();
   const vigentes = useMemo(
-    () => citas.filter((c) => !esCancelada(c.estado)),
+    () =>
+      citas.filter((c) =>
+        ['Pendiente', 'Confirmada', 'En consulta', 'Llamado', 'En sala'].includes(etiquetaEstado(c.estado))
+      ),
     [citas],
   );
   const proximas = useMemo(

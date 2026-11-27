@@ -60,6 +60,9 @@ const accionDoctor = (fn) => async (req, res) => {
 export const faltan5 = accionDoctor(sala.faltan5);
 export const terminar = accionDoctor(sala.terminar);
 export const llamarSiguiente = accionDoctor(sala.llamarSiguiente);
+export const iniciarConsulta = accionDoctor(sala.iniciarConsulta);
+export const noSePresento = accionDoctor(sala.noSePresento);
+export const estadoDoctor = accionDoctor(sala.estadoDoctor);
 
 export const misClinicas = async (req, res) => {
   try {

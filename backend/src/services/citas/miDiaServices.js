@@ -21,13 +21,14 @@ export const obtenerMiDia = async ({ idOdontologo }) => {
          WHERE c.idOdontologo = $1::int
            AND c.fecha = (now() AT TIME ZONE '${ZONA}')::date
            AND upper(c.estado) <> 'CANCELADA'
-         ORDER BY CASE upper(c.estado)
-                    WHEN 'EN_CONSULTA' THEN 0
-                    WHEN 'EN_SALA' THEN 1
-                    WHEN 'CONFIRMADA' THEN 2
-                    WHEN 'PENDIENTE' THEN 2
-                    ELSE 3 END,
-                  c.hora_llegada NULLS LAST, c.hora`,
+            ORDER BY CASE upper(c.estado)
+                WHEN 'EN_CONSULTA' THEN 0
+                WHEN 'LLAMADO' THEN 1
+                WHEN 'EN_SALA' THEN 2
+                WHEN 'CONFIRMADA' THEN 3
+                WHEN 'PENDIENTE' THEN 3
+                ELSE 4 END,
+            c.hora_llegada NULLS LAST, c.hora`,
         [idOdontologo]
     );
     return rows;

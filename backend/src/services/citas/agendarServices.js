@@ -441,6 +441,7 @@ export const crearCita = async ({
 
             await cliente.query('COMMIT');
 
+
             return {
                 id_cita: fila.id_cita,
                 fecha,

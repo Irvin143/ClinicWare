@@ -1,11 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { salaApi } from "../../services/api.js"; // <-- AJUSTA la ruta a tu archivo de API
-
-// Cómo se abre:
-//  - Con sesión de administrador iniciada:  /sala?clinica=1
-//    La pantalla pide sola su clave y la agrega a la dirección del navegador.
-//    Copia esa dirección completa para abrirla en la TV (ya no necesita login).
-//  - Sin sesión (la TV):  /sala?clinica=1&key=TOKEN
+import { salaApi } from "../../services/api.js";
 
 function ding() {
   try {
@@ -29,11 +23,9 @@ export default function PantallaSala() {
   const [key, setKey] = useState(params.get("key"));
   const [errorClave, setErrorClave] = useState("");
   const [estado, setEstado] = useState(null);
-  const [, setTick] = useState(0);
   const [sonido, setSonido] = useState(false);
-  const previos = useRef({}); // idodontologo -> paciente actual (para detectar cambios)
+  const previos = useRef({}); // idodontologo -> paciente llamado (para detectar cambios)
 
-  // Sin clave en la dirección: la pide con la sesión del administrador
   useEffect(() => {
     if (key || !idClinica) return;
     let activo = true;
@@ -43,7 +35,7 @@ export default function PantallaSala() {
         if (!activo) return;
         const url = new URL(window.location.href);
         url.searchParams.set("key", token);
-        window.history.replaceState(null, "", url); // deja la dirección lista para copiar a la TV
+        window.history.replaceState(null, "", url);
         setKey(token);
       })
       .catch(() =>
@@ -58,22 +50,15 @@ export default function PantallaSala() {
     const es = new EventSource(salaApi.urlEventos(idClinica, key));
     es.onmessage = (e) => {
       const nuevo = JSON.parse(e.data);
-      nuevo.desfase = nuevo.ahora - Date.now(); // reloj del servidor vs. el de la TV
       nuevo.doctores.forEach((d) => {
-        const nombre = d.actual?.paciente ?? null;
+        const nombre = d.llamado?.paciente ?? null;
         if (nombre && previos.current[d.idodontologo] !== nombre) ding();
         previos.current[d.idodontologo] = nombre;
       });
       setEstado(nuevo);
     };
-    return () => es.close(); // EventSource se reconecta solo si se cae la red
+    return () => es.close();
   }, [idClinica, key]);
-
-  // Reevalúa cada segundo para pasar de "Pase" a "En consulta"
-  useEffect(() => {
-    const t = setInterval(() => setTick((n) => n + 1), 1000);
-    return () => clearInterval(t);
-  }, []);
 
   if (!idClinica) {
     return <p className="p-6">Falta la clínica. Abre la dirección así: /sala?clinica=1</p>;
@@ -81,8 +66,6 @@ export default function PantallaSala() {
   if (errorClave) {
     return <p className="p-6 text-red-700">{errorClave}</p>;
   }
-
-  const ahoraServidor = Date.now() + (estado?.desfase ?? 0);
 
   return (
     <main className="grid min-h-screen content-start gap-[3vh] bg-[#EEF4F2] px-[4vw] py-[3vh] font-['Atkinson_Hyperlegible',system-ui,sans-serif] text-[#10302C] grid-cols-[repeat(auto-fit,minmax(min(26rem,100%),1fr))]">
@@ -106,22 +89,31 @@ export default function PantallaSala() {
       )}
 
       {estado?.doctores.map((d) => {
-        const recien = d.actual?.llamadoEn && ahoraServidor - d.actual.llamadoEn < 30000;
+        const llamado = !!d.llamado;
+        const enConsulta = !llamado && !!d.actual;
         const prepararse = d.actual?.aviso5min && d.siguiente;
+
+        const etiqueta = llamado
+          ? "Pase al consultorio"
+          : enConsulta
+          ? "En consulta"
+          : "Consultorio libre";
+        const paciente = llamado ? d.llamado.paciente : d.actual?.paciente ?? "—";
+
         return (
           <section className="grid gap-[1.5vh]" key={d.idodontologo}>
             <h2 className="text-[clamp(1.3rem,2.2vw,2rem)] text-[#4F6B66]">{d.nombre}</h2>
 
             <div
               className={`flex min-h-[24vh] flex-col justify-center rounded-3xl px-[2.5vw] py-[3vh] ${
-                recien ? "bg-[#1B7F66] text-white" : "bg-white"
+                llamado ? "animate-pulse bg-[#1B7F66] text-white" : "bg-white"
               }`}
             >
-              <small className={`mb-1 text-[clamp(1rem,1.8vw,1.6rem)] ${recien ? "text-[#D5F0E8]" : "text-[#6B8782]"}`}>
-                {d.actual ? (recien ? "Pase a consulta" : "En consulta") : "Consultorio libre"}
+              <small className={`mb-1 text-[clamp(1rem,1.8vw,1.6rem)] ${llamado ? "text-[#D5F0E8]" : "text-[#6B8782]"}`}>
+                {etiqueta}
               </small>
               <strong className="text-[clamp(2.5rem,6vw,6rem)] leading-[1.05]">
-                {d.actual ? d.actual.paciente : "—"}
+                {paciente}
               </strong>
             </div>
 

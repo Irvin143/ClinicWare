@@ -1,6 +1,7 @@
 import * as agendarService from '../../services/citas/agendarServices.js';
 
 import  { notificarCitaPorCorreo } from '../../services/citas/correoServices.js';
+import { emitirPorCita } from '../../services/notificaciones/salaServices.js';
 
 const responderError = (res, err) => {
     if (err.status) return res.status(err.status).json({ error: err.message });
@@ -217,9 +218,8 @@ export const crear = async (req, res) => {
             motivo,
             idTipo: idtipo != null ? Number(idtipo) : null,
         });
-
-        // Se espera el correo antes de responder: en Vercel, el trabajo posterior a la respuesta
-        // puede cortarse. Esta función nunca lanza error.
+        
+        emitirPorCita(idCita).catch(console.error);
         await notificarCitaPorCorreo(cita.id_cita);
 
         res.status(201).json(cita);

@@ -10,7 +10,6 @@ const router = Router();
 router.use(exigirSesion);
 
 router.get('/', listarMisCitas); //                  GET   /api/citas
-// router.patch('/:id/aviso-5min', avisoCincoMin);
 router.patch('/:id/cancelar', cancelarMiCita); //    PATCH /api/citas/:id/cancelar
 router.patch('/:id/reagendar', reagendarMiCita); //  PATCH /api/citas/:id/reagendar  { fecha, hora }
 router.patch('/:id/estado', cambiarEstadoCita); //    PATCH /api/citas/:id/estado     { estado }

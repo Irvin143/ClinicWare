@@ -250,11 +250,13 @@ export const cambiarEstadoCita = async (req, res) => {
             estado,
             ...alcance,
         });
+        
+        emitirPorCita(idCita).catch(console.error);
+
         if(estado === ESTADOS_CITA.cancelada || estado === ESTADOS_CITA.no_asistio) {
             await notificarCitaPorCorreo(idCita, false, true);
         }
         
-        emitirPorCita(idCita).catch(console.error);
 
         res.json(cita);
     } catch (error) {
@@ -288,6 +290,7 @@ export const marcarLlegadaCita = async (req, res) => {
             enSala,
             idsClinica: alcance.idsClinica, // null = admin, sin restricción
         });
+        
         emitirPorCita(idCita).catch(console.error); // avisa en tiempo real
 
         res.json(resultado); // { id_cita, estado }

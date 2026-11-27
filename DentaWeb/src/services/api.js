@@ -438,7 +438,6 @@ export const citasApi = {
     return apiRequest(`/api/citas/${id}/aviso-5min`, { method: 'PATCH' });
   },
 };
-
 export const salaApi = {
   faltan5() {
     return apiRequest("/api/sala/consulta/faltan-5", { method: "POST" });
@@ -448,6 +447,15 @@ export const salaApi = {
   },
   llamarSiguiente() {
     return apiRequest("/api/sala/consulta/llamar-siguiente", { method: "POST" });
+  },
+  iniciarConsulta() {
+    return apiRequest("/api/sala/consulta/iniciar-consulta", { method: "POST" });
+  },
+  noSePresento() {
+    return apiRequest("/api/sala/consulta/no-se-presento", { method: "POST" });
+  },
+  estado() {
+    return apiRequest("/api/sala/consulta/estado", { method: "GET" });
   },
   crearTokenPantalla(idClinica) {
     return apiRequest("/api/sala/pantalla-token", { method: "POST", body: { idClinica } });

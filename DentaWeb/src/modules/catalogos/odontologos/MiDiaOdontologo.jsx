@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { BellRing, CheckCheck, Clock, Loader2, PhoneCall, Stethoscope, User } from 'lucide-react';
+import { BellRing, CheckCheck, Clock, Loader2, PhoneCall, Stethoscope, User, UserCheck, Undo2 } from 'lucide-react';
 import { citasApi, salaApi } from '../../../services/api.js';
 import { ToastContainer } from '../../../components/Toast.jsx';
 
@@ -126,6 +126,7 @@ export default function MiDiaOdontologo() {
   }, []);
 
   const enConsulta = citas.find((c) => c.estado === 'EN_CONSULTA') ?? null;
+  const llamado = citas.find((c) => c.estado === 'LLAMADO') ?? null;
   const enSala = citas
     .filter((c) => c.estado === 'EN_SALA')
     .sort((a, b) => new Date(a.hora_llegada ?? 0) - new Date(b.hora_llegada ?? 0));
@@ -146,7 +147,12 @@ export default function MiDiaOdontologo() {
     }
   }
 
-  const llamarSiguiente = () => ejecutar('llamar', () => salaApi.llamarSiguiente(), 'Paciente en consulta.');
+  const llamarSiguiente = () =>
+  ejecutar('llamar', () => salaApi.llamarSiguiente(), 'Paciente llamado. Esperando que llegue.');
+  const iniciarConsulta = () =>
+    ejecutar('iniciar', () => salaApi.iniciarConsulta(), 'Consulta iniciada.');
+  const noSePresento = () =>
+    ejecutar('noshow', () => salaApi.noSePresento(), 'El paciente volvió a la sala.');
   const avisarCinco = () => ejecutar('aviso', () => salaApi.faltan5(), 'Se avisó que faltan 5 minutos.');
   const terminar = () =>
     ejecutar(
@@ -185,6 +191,47 @@ export default function MiDiaOdontologo() {
         </div>
       ) : (
         <>
+        {llamado && (
+          <Bloque titulo="Llamado" cantidad={1}>
+            <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-950/60">
+              <p className="flex items-center gap-2 text-lg font-bold text-amber-900 dark:text-amber-200">
+                <PhoneCall size={20} aria-hidden="true" />
+                {llamado.paciente}
+              </p>
+              <p className="mt-1 text-sm text-amber-900/80 dark:text-amber-200/80">
+                {llamado.servicio} · esperando que llegue al consultorio
+              </p>
+              <div className="mt-4 flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  onClick={iniciarConsulta}
+                  disabled={Boolean(accion)}
+                  className={`${claseBoton} bg-teal-600 text-white hover:bg-teal-700`}
+                >
+                  {accion === 'iniciar' ? (
+                    <Loader2 size={18} className="animate-spin" aria-hidden="true" />
+                  ) : (
+                    <UserCheck size={18} aria-hidden="true" />
+                  )}
+                  Ya llegó · Iniciar consulta
+                </button>
+                <button
+                  type="button"
+                  onClick={noSePresento}
+                  disabled={Boolean(accion)}
+                  className={`${claseBoton} border border-red-300 text-red-700 hover:bg-red-50 dark:border-red-800 dark:text-red-300`}
+                >
+                  {accion === 'noshow' ? (
+                    <Loader2 size={18} className="animate-spin" aria-hidden="true" />
+                  ) : (
+                    <Undo2 size={18} aria-hidden="true" />
+                  )}
+                  No se presentó
+                </button>
+              </div>
+            </div>
+          </Bloque>
+        )}
           {/* En consulta */}
           <Bloque titulo="En consulta" cantidad={enConsulta ? 1 : 0}>
             {enConsulta ? (
@@ -231,7 +278,6 @@ export default function MiDiaOdontologo() {
                     ) : (
                       <CheckCheck size={18} aria-hidden="true" />
                     )}
-                    {enSala.length > 0 ? 'Terminé y llamar siguiente' : 'Terminé'}
                   </button>
                 </div>
               </div>
@@ -241,7 +287,7 @@ export default function MiDiaOdontologo() {
                 <button
                   type="button"
                   onClick={llamarSiguiente}
-                  disabled={Boolean(accion) || enSala.length === 0}
+                  disabled={Boolean(accion) || enSala.length === 0 || Boolean(llamado)}
                   className={`${claseBoton} bg-teal-600 text-white hover:bg-teal-700`}
                 >
                   {accion === 'llamar' ? (

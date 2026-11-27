@@ -43,12 +43,6 @@ export const marcarPendientesVencidasComoNoAsistio = async () => {
    LISTAR MIS CITAS
    ============================================================ */
 
-// Devuelve todas las citas del paciente (pasadas y futuras), la más reciente primero.
-// `fecha` ('AAAA-MM-DD') y `hora` ('HH:mm') van separadas para evitar desfases de zona horaria.
-// El motivo que se muestra es el nombre del servicio (la cita no guarda el servicio directo,
-// sino idclinica_servicio). `observaciones` queda para el detalle.
-// Las urgencias salen con el odontólogo genérico "Odontólogo Urgencia" (LEFT JOIN, sin filtrar
-// por usuario activo, porque ese usuario está inactivo a propósito).
 export const obtenerCitasPaciente = async (idPaciente) => {
     const { rows } = await conexion.query(
         `SELECT c.idCita                                    AS id,

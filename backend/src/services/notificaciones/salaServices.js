@@ -30,7 +30,7 @@ export async function estadoSala(idClinica) {
        JOIN odontologos o ON o.idodontologo = c.idodontologo
       WHERE cs.idclinica = $1
         AND c.fecha = ${HOY}
-        AND c.estado IN ('EN_SALA', 'EN_CONSULTA')
+        AND c.estado IN ('EN_SALA', 'LLAMADO', 'EN_CONSULTA')
       ORDER BY c.hora, c.idcita`,
     [idClinica]
   );
@@ -106,10 +106,9 @@ export async function idOdontologoDeUsuario(idUsuario) {
 // ---------- Acciones ----------
 
 
-// Pasa al primer EN_SALA (por hora) a EN_CONSULTA. Devuelve la cita o null.
 async function llamarSiguienteTx(client, idOdontologo) {
   const { rows } = await client.query(
-    `UPDATE citas SET estado = 'EN_CONSULTA', inicio_consulta = now()
+    `UPDATE citas SET estado = 'LLAMADO'
       WHERE idcita = (
         SELECT idcita FROM citas
          WHERE idodontologo = $1 AND estado = 'EN_SALA' AND fecha = ${HOY}
