@@ -43,6 +43,7 @@ export async function estadoSala(idClinica) {
         idodontologo: r.idodontologo,
         nombre: `${r.odo_nombre} ${r.odo_apellido}`.trim(),
         actual: null,
+        llamado: null,
         siguiente: null,
       });
     }
@@ -55,8 +56,10 @@ export async function estadoSala(idClinica) {
         aviso5min: r.aviso_5min,
         llamadoEn: r.inicio_consulta ? new Date(r.inicio_consulta).getTime() : null,
       };
+    } else if (r.estado === 'LLAMADO') {
+      d.llamado = { paciente }; // la TV puede mostrar "Pase al consultorio"
     } else if (!d.siguiente) {
-      d.siguiente = { paciente }; // el primero EN_SALA por hora
+      d.siguiente = { paciente };
     }
   }
 
@@ -134,37 +137,64 @@ async function enTransaccion(fn) {
   }
 }
 
-// 3. Doctor: "Terminé" -> cierra la actual y llama al siguiente
-export async function terminar(idOdontologo) {
-  const idRef = await enTransaccion(async (client) => {
-    const fin = await client.query(
-      `UPDATE citas SET estado = 'ATENDIDA', fin_consulta = now()
-        WHERE idodontologo = $1 AND estado = 'EN_CONSULTA'
-        RETURNING idcita`,
-      [idOdontologo]
-    );
-    const sig = await llamarSiguienteTx(client, idOdontologo);
-    if (!fin.rows[0] && !sig) {
-      throw new ErrorSala('No hay consulta que terminar ni pacientes en espera', 409);
-    }
-    return (sig ?? fin.rows[0]).idcita;
-  });
-  return emitirPorCita(idRef);
-}
-
-// 4. Doctor: "Llamar siguiente" (primer paciente del día o tras una pausa)
+// Doctor: "Llamar siguiente"
 export async function llamarSiguiente(idOdontologo) {
   const idRef = await enTransaccion(async (client) => {
     const ocupado = await client.query(
-      `SELECT 1 FROM citas WHERE idodontologo = $1 AND estado = 'EN_CONSULTA'`,
+      `SELECT estado FROM citas
+        WHERE idodontologo = $1 AND fecha = ${HOY}
+          AND estado IN ('LLAMADO', 'EN_CONSULTA')`,
       [idOdontologo]
     );
-    if (ocupado.rowCount) throw new ErrorSala('Ya hay un paciente en consulta', 409);
+    if (ocupado.rowCount) {
+      throw new ErrorSala(
+        ocupado.rows[0].estado === 'LLAMADO'
+          ? 'Ya hay un paciente llamado esperando'
+          : 'Ya hay un paciente en consulta',
+        409
+      );
+    }
     const sig = await llamarSiguienteTx(client, idOdontologo);
     if (!sig) throw new ErrorSala('No hay pacientes en sala de espera', 404);
     return sig.idcita;
   });
   return emitirPorCita(idRef);
+}
+
+// Doctor: "Ya llegó" -> LLAMADO a EN_CONSULTA
+export async function iniciarConsulta(idOdontologo) {
+  const { rows } = await conexion.query(
+    `UPDATE citas SET estado = 'EN_CONSULTA', inicio_consulta = now()
+      WHERE idodontologo = $1 AND estado = 'LLAMADO' AND fecha = ${HOY}
+      RETURNING idcita`,
+    [idOdontologo]
+  );
+  if (!rows[0]) throw new ErrorSala('No hay un paciente llamado para iniciar', 409);
+  return emitirPorCita(rows[0].idcita);
+}
+
+// Doctor: "Terminé" -> cierra la actual (ya no llama al siguiente)
+export async function terminar(idOdontologo) {
+  const { rows } = await conexion.query(
+    `UPDATE citas SET estado = 'ATENDIDA', fin_consulta = now()
+      WHERE idodontologo = $1 AND estado = 'EN_CONSULTA'
+      RETURNING idcita`,
+    [idOdontologo]
+  );
+  if (!rows[0]) throw new ErrorSala('No hay una consulta en curso que terminar', 409);
+  return emitirPorCita(rows[0].idcita);
+}
+
+// Opcional: el paciente no llegó -> vuelve a sala
+export async function noSePresento(idOdontologo) {
+  const { rows } = await conexion.query(
+    `UPDATE citas SET estado = 'EN_SALA'
+      WHERE idodontologo = $1 AND estado = 'LLAMADO' AND fecha = ${HOY}
+      RETURNING idcita`,
+    [idOdontologo]
+  );
+  if (!rows[0]) throw new ErrorSala('No hay un paciente llamado', 409);
+  return emitirPorCita(rows[0].idcita);
 }
 
 export async function clinicasDeAlcance(idsClinica) {
@@ -187,4 +217,16 @@ export async function faltan5(idOdontologo) {
   );
   if (!rows[0]) throw new ErrorSala('Solo puedes avisar en una cita que está en consulta', 409);
   return emitirPorCita(rows[0].idcita);
+}
+
+export async function estadoDoctor(idOdontologo) {
+  const { rows } = await conexion.query(
+    `SELECT idcita, estado FROM citas
+      WHERE idodontologo = $1 AND fecha = ${HOY}
+        AND estado IN ('LLAMADO', 'EN_CONSULTA')
+      ORDER BY (estado = 'EN_CONSULTA') DESC
+      LIMIT 1`,
+    [idOdontologo]
+  );
+  return { pacienteActual: rows[0] ?? null };
 }
