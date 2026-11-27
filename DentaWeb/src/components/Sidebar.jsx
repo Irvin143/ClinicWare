@@ -22,11 +22,12 @@ const navItems = [
   { path: '/servicios', label: 'Servicios', icon: BriefcaseMedical },
   { path: '/especialidades', label: 'Especialidades', icon: GraduationCap },
   { path: '/estudios', label: 'Estudios', icon: Scan },
-  { path: '/tipos-cita', label: 'Tipos de cita', icon: CalendarClock },
   { path: '/paquetes', label: 'Paquetes de roles', icon: Package },
   { path: '/roles', label: 'Roles', icon: Shield },
   { path: '/tipos-usuario', label: 'Tipos de usuario', icon: IdCard },
   { path: '/usuarios', label: 'Usuarios', icon: UserCog },
+  { path: '/mi-dia', label: 'Mi día', icon: UserCog },
+  { path: '/pantalla-sala', label: 'Pantalla de sala', icon: UserCog }
 ];
 
 function presentarPalabra(texto) {

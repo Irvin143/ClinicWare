@@ -84,12 +84,12 @@ export const enviarConfirmacionCita = async (cita, reagendada = false, cancelada
         ? 'Tu cita fue reagendada'
         : cancelada
         ? 'Tu cita fue cancelada'
-        : 'Tu cita está agendada';
+        : 'Tu cita está agendada'
 
     const texto = [
         saludo,
         '',
-        reagendada ? 'Tu cita fue reagendada:' : 'Tu cita quedó agendada:',
+        reagendada ? 'Tu cita fue reagendada:' : cancelada ? 'Tu cita fue cancelada:' : 'Tu cita quedó agendada:',
         `• Servicio: ${cita.servicio}`,
         `• Fecha: ${fecha}`,
         `• Hora: ${hora}`,
@@ -109,7 +109,7 @@ export const enviarConfirmacionCita = async (cita, reagendada = false, cancelada
 
     const html = `
     <div style="font-family:Arial,Helvetica,sans-serif;max-width:520px;margin:0 auto;padding:24px;">
-        <h2 style="color:#0f766e;margin:0 0 16px;">${reagendada ? 'Tu cita fue reagendada' : 'Tu cita está agendada'}</h2>
+        <h2 style="color:#0f766e;margin:0 0 16px;">${reagendada ? 'Tu cita fue reagendada' : cancelada ? 'Tu cita fue cancelada' : 'Tu cita está agendada'}</h2>
         <p style="color:#1e293b;font-size:15px;">${escaparHtml(saludo)}</p>
         <p style="color:#1e293b;font-size:15px;">Estos son los datos de tu cita:</p>
         <table style="border-collapse:collapse;margin:12px 0 20px;">

@@ -7,6 +7,7 @@ import {
 } from '../../services/citas/misCitasServices.js';
 import * as agendaPersonal from '../../services/citas/agendaPersonalServices.js';
 import  { notificarCitaPorCorreo } from '../../services/citas/correoServices.js';
+import { emitirPorCita } from '../../services/notificaciones/salaServices.js';
 
 const FECHA_ISO = /^\d{4}-\d{2}-\d{2}$/;
 const RANGO_MAX_DIAS = 31;
@@ -61,6 +62,9 @@ const ESTADOS_CITA = {
     atendida: 'ATENDIDA',
     cancelada: 'CANCELADA',
     no_asistio: 'NO_ASISTIO',
+    reagendada: 'REAGENDADA',
+    en_sala: 'EN_SALA',
+    en_consulta: 'EN_CONSULTA',
 };
 
 function normalizarEstadoCita(valor) {
@@ -73,11 +77,11 @@ function normalizarEstadoCita(valor) {
     return ESTADOS_CITA[clave] ?? null;
 }
 
-async function alcancePersonal(usuario) {
+export async function alcancePersonal(usuario) {
     const esAdmin = tieneIdentidad(usuario, 'admin');
     const esOdontologo = tieneIdentidad(usuario, 'odontologo');
     const esClinica = tieneIdentidad(usuario, 'clinica');
-
+    
     if (esAdmin) return { idOdontologo: null, idsClinica: null };
     if (esOdontologo) {
         const id = await agendaPersonal.idOdontologoDeUsuario(usuario.sub);
@@ -183,7 +187,11 @@ export const cancelarMiCita = async (req, res) => {
 
         const idPaciente = await obtenerIdPaciente(idUsuarioDe(req));
         const cita = await cancelarCita({ idCita, idPaciente });
-        await notificarCitaPorCorreo(idCita, cancelada = true);
+        await notificarCitaPorCorreo(idCita, false, true);
+        console.log('notificarCitaPorCorreo', idCita, false, true);
+
+        emitirPorCita(idCita).catch(console.error);
+
         res.json(cita);
     } catch (error) {
         responderError(res, error);
@@ -206,7 +214,7 @@ export const reagendarMiCita = async (req, res) => {
         if (esPersonal(req.usuario)) {
             const alcance = await alcancePersonal(req.usuario);
             const cita = await agendaPersonal.reagendarCitaPersonal({ idCita, fecha, hora, ...alcance });
-            await notificarCitaPorCorreo(idCita, reagendada = true); 
+            await notificarCitaPorCorreo(idCita, true); 
             return res.json(cita);
         }
 
@@ -215,6 +223,8 @@ export const reagendarMiCita = async (req, res) => {
         const cita = await reagendarCita({ idCita, idPaciente, fecha, hora });
 
         await notificarCitaPorCorreo(cita.id_cita, true); // Se espera el correo antes de responder: en Vercel, el trabajo posterior a la respuesta puede cortarse. Esta función nunca lanza error.
+
+        emitirPorCita(idCita).catch(console.error);
 
         res.json(cita);
     } catch (error) {
@@ -240,7 +250,47 @@ export const cambiarEstadoCita = async (req, res) => {
             estado,
             ...alcance,
         });
+        if(estado === ESTADOS_CITA.cancelada || estado === ESTADOS_CITA.no_asistio) {
+            await notificarCitaPorCorreo(idCita, false, true);
+        }
+        
+        emitirPorCita(idCita).catch(console.error);
+
         res.json(cita);
+    } catch (error) {
+        responderError(res, error);
+    }
+};
+
+export const marcarLlegadaCita = async (req, res) => {
+    try {
+        const idCita = Number.parseInt(req.params.id, 10);
+        if (!Number.isInteger(idCita)) {
+            return res.status(400).json({ error: 'El id de la cita no es válido' });
+        }
+
+        const enSala = req.body?.en_sala;
+        if (typeof enSala !== 'boolean') {
+            return res.status(400).json({ error: 'en_sala debe ser true o false' });
+        }
+
+        if (!esPersonal(req.usuario)) {
+            return res.status(403).json({ error: 'No tienes permiso para esta acción' });
+        }
+
+        const alcance = await alcancePersonal(req.usuario);
+        // El odontólogo no marca llegadas; lo hace la clínica (o el admin)
+        if (alcance.idOdontologo != null) {
+            return res.status(403).json({ error: 'Solo la clínica puede marcar la llegada del paciente' });
+        }
+        const resultado = await agendaPersonal.marcarLlegada({
+            idCita,
+            enSala,
+            idsClinica: alcance.idsClinica, // null = admin, sin restricción
+        });
+        emitirPorCita(idCita).catch(console.error); // avisa en tiempo real
+
+        res.json(resultado); // { id_cita, estado }
     } catch (error) {
         responderError(res, error);
     }

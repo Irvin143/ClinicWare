@@ -138,6 +138,7 @@ export function CatalogoPage({
   onEliminar, // (id) => void | Promise  -> desactivar (borrado lógico)
   onReactivar, // (id) => void | Promise
   onBorrar, // (id) => void | Promise   -> eliminar permanente (opcional)
+  accionesExtra = [], // [{ icono, titulo, onClick(fila) }]  -> botones extra por fila
   // Modal
   modal = {}, // { icono, titulo, textoGuardar, contenido, onGuardar, onCerrar, guardando }
 }) {
@@ -153,7 +154,9 @@ export function CatalogoPage({
   });
   const [toasts, setToasts] = useState([]);
 
-  const hayAcciones = Boolean(onEditar || onEliminar || onReactivar || onBorrar);
+  const hayAcciones = Boolean(
+    onEditar || onEliminar || onReactivar || onBorrar || accionesExtra.length > 0
+  );
 
   // ---- Notificaciones ----
   const cerrarToast = useCallback((id) => {
@@ -242,18 +245,20 @@ export function CatalogoPage({
         : 'Aún no hay registros.';
   const claseTextoTabla = !cargando && errorCarga ? 'text-red-600 dark:text-error' : 'text-slate-500 dark:text-on-surface-variant';
   // El ancho incluye el encabezado "Acciones" y evita que se comprima con una sola acción.
+  const gruposAcciones =
+    (onEditar ? 1 : 0) +
+    (onEliminar || onReactivar ? 1 : 0) +
+    (onBorrar ? 1 : 0) +
+    accionesExtra.length;
   const anchoAccionesRem = hayAcciones
     ? Math.max(
         6,
         0.5 +
+          accionesExtra.length * 1.875 +
           (onEditar ? 1.875 : 0) +
           (onEliminar || onReactivar ? 2.75 : 0) +
           (onBorrar ? 1.875 : 0) +
-          0.5 *
-            ((onEditar ? 1 : 0) +
-              (onEliminar || onReactivar ? 1 : 0) +
-              (onBorrar ? 1 : 0) -
-              1) +
+          0.5 * (gruposAcciones - 1) +
           1.25
       )
     : 0;
@@ -571,6 +576,18 @@ export function CatalogoPage({
                             }`}
                           >
                             <div className="flex w-full items-center justify-end gap-2">
+                              {accionesExtra.map(({ icono: Icono, titulo: tituloAccion, onClick }) => (
+                                <button
+                                  key={tituloAccion}
+                                  type="button"
+                                  onClick={() => onClick(fila)}
+                                  title={tituloAccion}
+                                  aria-label={tituloAccion}
+                                  className={`${botonIcono} cursor-pointer hover:border-slate-300 hover:text-slate-800 dark:text-on-surface dark:hover:text-on-surface dark:hover:border-outline-variant`}
+                                >
+                                  <Icono size={16} />
+                                </button>
+                              ))}
                               {onEditar && (
                                 <button
                                   type="button"
@@ -651,6 +668,17 @@ export function CatalogoPage({
 
                     {hayAcciones && (
                       <div className="mt-3 flex items-center justify-end gap-2">
+                        {accionesExtra.map(({ icono: Icono, titulo: tituloAccion, onClick }) => (
+                          <button
+                            key={tituloAccion}
+                            type="button"
+                            onClick={() => onClick(fila)}
+                            className={`${botonIcono} flex cursor-pointer items-center gap-1.5 px-3 text-xs font-medium hover:border-slate-300 hover:text-slate-800 dark:text-on-surface dark:hover:text-on-surface dark:hover:border-outline-variant`}
+                          >
+                            <Icono size={14} />
+                            {tituloAccion}
+                          </button>
+                        ))}
                         {onEditar && (
                           <button
                             type="button"

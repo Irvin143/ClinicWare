@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Building2, Eye, EyeOff, KeyRound } from 'lucide-react';
+import { Building2, Eye, EyeOff, KeyRound, Monitor } from 'lucide-react';
 import { CatalogoPage } from '../../../components/CatalogoPage.jsx';
 import { ChecklistContrasena, errorContrasena } from '../../../components/ChecklistContrasena.jsx';
 import { AvisoCampo, AvisoGeneral, scrollAlPrimerCampo } from '../../../components/avisosFormulario.jsx';
@@ -11,6 +11,7 @@ import {
   cargarCatalogoSepomex,
   entradaSepomex,
 } from '../../../utils/sepomex.js';
+import { useNavigate } from 'react-router-dom';
 
 // Mobile: compacto. Desktop (md:): más amplio y cómodo
 const inputClass =
@@ -277,6 +278,8 @@ export default function ClinicasPage() {
   const [catalogoCp, setCatalogoCp] = useState(null);
   const [verContrasena, setVerContrasena] = useState(false);
   const [verConfirmar, setVerConfirmar] = useState(false);
+
+  const navigate = useNavigate();
 
   const creando = editandoId === null;
 
@@ -704,6 +707,13 @@ export default function ClinicasPage() {
         onCerrar: resetFormulario,
         guardando,
       }}
+      accionesExtra={[
+        {
+          icono: Monitor,
+          titulo: 'Pantalla de sala',
+          onClick: (fila) => navigate(`/sala?clinica=${fila.id}`),
+        },
+      ]}
     />
   );
 }
